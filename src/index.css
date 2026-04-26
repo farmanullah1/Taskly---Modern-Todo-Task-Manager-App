@@ -1,106 +1,139 @@
 @import "tailwindcss";
 
 @theme {
-  --color-primary: var(--accent-color, #6366f1);
-  --color-primary-hover: var(--accent-hover, #4f46e5);
-  --color-secondary: #ec4899;
-  --color-accent: #8b5cf6;
+  --color-primary: #8B5CF6;
+  --color-secondary: #EC4899;
+  --color-accent: #06B6D4;
+  --color-cosmic-bg: #030712;
   
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-sans: 'Outfit', 'Inter', sans-serif;
 }
 
 :root {
-  --accent-color: #6366f1;
-  --accent-hover: #4f46e5;
-  --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-  --card-bg: rgba(255, 255, 255, 0.8);
-  --card-border: rgba(226, 232, 240, 0.8);
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(0, 0, 0, 0.05);
+  --glass-blur: blur(20px);
+  --glow-primary: 0 0 20px rgba(139, 92, 246, 0.2);
+  --text-glow: 0 0 10px rgba(0, 0, 0, 0.1);
+  --nebula-1: rgba(139, 92, 246, 0.1);
+  --nebula-2: rgba(236, 72, 153, 0.1);
+  --nebula-3: rgba(6, 182, 212, 0.05);
 }
 
 .dark {
-  --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  --card-bg: rgba(30, 41, 59, 0.7);
-  --card-border: rgba(51, 65, 85, 0.5);
-  --text-main: #f1f5f9;
-  --text-muted: #94a3b8;
-  --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  --glass-bg: rgba(15, 23, 42, 0.3);
+  --glass-border: rgba(255, 255, 255, 0.05);
+  --text-glow: 0 0 10px rgba(255, 255, 255, 0.2);
+  --nebula-1: rgba(139, 92, 246, 0.15);
+  --nebula-2: rgba(236, 72, 153, 0.15);
+  --nebula-3: rgba(6, 182, 212, 0.05);
 }
 
 @layer base {
   body {
-    @apply font-sans antialiased transition-colors duration-300;
-    background: var(--bg-gradient);
+    @apply font-sans antialiased selection:bg-primary/30 transition-colors duration-500;
     min-height: 100vh;
-    color: var(--text-main);
+    overflow-x: hidden;
+  }
+  
+  body.dark {
+    @apply text-white/90;
+    background: radial-gradient(circle at 50% 0%, #1e1b4b 0%, #030712 100%);
+  }
+
+  body:not(.dark) {
+    @apply text-slate-900;
+    background: radial-gradient(circle at 50% 0%, #f1f5f9 0%, #cbd5e1 100%);
   }
 }
 
 @layer components {
-  .glass-card {
-    @apply backdrop-blur-md rounded-2xl border transition-all duration-300;
-    background: var(--card-bg);
-    border-color: var(--card-border);
-    box-shadow: var(--glass-shadow);
+  .cosmic-card {
+    @apply backdrop-blur-[20px] rounded-[32px] border transition-all duration-500;
+    background: var(--glass-bg);
+    border-color: var(--glass-border);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.05);
+  }
+
+  .dark .cosmic-card {
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
   }
   
-  .btn-primary {
-    @apply px-4 py-2 rounded-xl font-medium transition-all active:scale-95 flex items-center justify-center gap-2;
-    background: linear-gradient(to right, var(--color-primary), var(--color-accent));
-    @apply text-white hover:opacity-90;
+  .cosmic-card:hover {
+    @apply border-white/20 translate-y-[-4px];
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4), 0 0 20px rgba(139, 92, 246, 0.1);
+  }
+
+  .glow-text {
+    text-shadow: var(--text-glow);
+  }
+
+  .btn-cosmic {
+    @apply px-6 py-3 rounded-2xl font-bold transition-all active:scale-95 flex items-center justify-center gap-2 overflow-hidden relative;
+    background: linear-gradient(135deg, #8B5CF6 0%, #EC4899 100%);
+    box-shadow: var(--glow-primary);
+    @apply text-white;
+  }
+
+  .btn-cosmic::before {
+    content: '';
+    @apply absolute inset-0 bg-white/20 translate-x-[-100%] transition-transform duration-700;
   }
   
-  .input-field {
-    @apply w-full px-4 py-3 rounded-xl border focus:ring-2 focus:ring-primary/50 outline-none transition-all;
-    background: var(--card-bg);
-    border-color: var(--card-border);
-    color: var(--text-main);
+  .btn-cosmic:hover::before {
+    @apply translate-x-[100%];
   }
 
-  .progress-bar-fill {
-    @apply h-full rounded-full transition-all duration-1000 ease-out;
-    background: linear-gradient(to right, var(--color-primary), var(--color-secondary));
+  .input-cosmic {
+    @apply w-full px-6 py-4 rounded-2xl bg-white/5 border border-white/10 focus:border-primary/50 outline-none transition-all placeholder:text-white/20;
+    @apply focus:ring-4 focus:ring-primary/10;
   }
 }
 
-/* 3D Tilt Effect */
-.tilt-card {
-  perspective: 1000px;
+/* Background Animation */
+@keyframes nebula {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.1) translate(2%, 2%); }
+  100% { transform: scale(1) translate(0, 0); }
 }
 
-.tilt-card-inner {
-  transition: transform 0.1s ease-out;
-  transform-style: preserve-3d;
-}
-
-/* Shimmer Animation */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
-.shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-  background-size: 200% 100%;
-  animation: shimmer 2s infinite;
+.nebula-bg {
+  position: fixed;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  z-index: -1;
+  background: 
+    radial-gradient(circle at 20% 30%, var(--nebula-1) 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, var(--nebula-2) 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, var(--nebula-3) 0%, transparent 60%);
+  animation: nebula 20s infinite ease-in-out;
 }
 
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-transparent;
+  background: #030712;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-300 dark:bg-slate-700 rounded-full;
+  background: linear-gradient(to bottom, #8B5CF6, #EC4899);
+  border-radius: 20px;
+  border: 3px solid #030712;
 }
 
-/* Dragging Styles */
-.dragging {
-  @apply opacity-50 scale-105 rotate-2 z-50;
+/* Shimmer */
+.shimmer-bg {
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+  background-size: 200% 100%;
+  animation: shimmer 3s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
 }

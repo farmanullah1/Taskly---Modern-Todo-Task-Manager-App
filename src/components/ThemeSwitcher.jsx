@@ -1,35 +1,48 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Palette } from 'lucide-react';
+import { Palette, Sparkles } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 const themes = [
-  { name: 'Indigo', color: '#6366f1', hover: '#4f46e5' },
-  { name: 'Rose', color: '#f43f5e', hover: '#e11d48' },
-  { name: 'Emerald', color: '#10b981', hover: '#059669' },
-  { name: 'Amber', color: '#f59e0b', hover: '#d97706' },
-  { name: 'Violet', color: '#8b5cf6', hover: '#7c3aed' },
-  { name: 'Sky', color: '#0ea5e9', hover: '#0284c7' },
+  { name: 'Default', start: '#7C3AED', end: '#06B6D4' }, // Purple -> Cyan
+  { name: 'Sunset', start: '#F97316', end: '#EF4444' }, // Orange -> Red
+  { name: 'Ocean', start: '#0EA5E9', end: '#14B8A6' }, // Blue -> Teal
+  { name: 'Neon', start: '#22C55E', end: '#4ADE80' }, // Green
+  { name: 'Royal', start: '#6366F1', end: '#A855F7' }, // Indigo -> Purple
+  { name: 'Pink', start: '#EC4899', end: '#F472B6' }, // Pink
+  { name: 'Mono', start: '#475569', end: '#94A3B8' }, // Monochrome
+  { name: 'Gold', start: '#F59E0B', end: '#EAB308' }, // Gold
 ];
 
 export function ThemeSwitcher({ currentTheme, onThemeChange }) {
   return (
-    <div className="flex items-center gap-3 glass-card p-2 px-4 w-fit">
-      <Palette size={18} className="text-slate-400" />
-      <div className="flex gap-2">
+    <div className="flex flex-col gap-3 glass-card p-4">
+      <div className="flex items-center gap-2 mb-1">
+        <Palette size={16} className="text-primary" />
+        <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">Select Skin</span>
+      </div>
+      <div className="grid grid-cols-4 gap-3">
         {themes.map((theme) => (
           <motion.button
             key={theme.name}
-            whileHover={{ scale: 1.2 }}
+            whileHover={{ scale: 1.15, y: -2 }}
             whileTap={{ scale: 0.9 }}
             onClick={() => onThemeChange(theme)}
             className={cn(
-              "w-5 h-5 rounded-full transition-shadow",
-              currentTheme?.name === theme.name ? "ring-2 ring-offset-2 ring-slate-400 dark:ring-offset-slate-900" : ""
+              "w-8 h-8 rounded-full transition-all border-2 flex items-center justify-center",
+              currentTheme?.name === theme.name 
+                ? "border-primary shadow-lg shadow-primary/20 scale-110" 
+                : "border-transparent hover:border-slate-300 dark:hover:border-slate-600"
             )}
-            style={{ backgroundColor: theme.color }}
+            style={{ 
+              background: `linear-gradient(135deg, ${theme.start}, ${theme.end})` 
+            }}
             title={theme.name}
-          />
+          >
+            {currentTheme?.name === theme.name && (
+              <Sparkles size={12} className="text-white" />
+            )}
+          </motion.button>
         ))}
       </div>
     </div>

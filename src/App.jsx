@@ -17,14 +17,26 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Sun, 
   Moon, 
-  Layout, 
+  Zap, 
+  Settings,
   CheckCircle2, 
   ListTodo, 
   Sparkles, 
   Download, 
-  Upload,
+  X,
   Keyboard,
-  Info
+  Rocket,
+  Flame,
+  LayoutGrid,
+  Search,
+  Filter,
+  Trash2,
+  MoreVertical,
+  Plus,
+  ArrowRight,
+  User,
+  Globe,
+  ExternalLink
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import useSound from 'use-sound';
@@ -33,56 +45,31 @@ import { TaskInput } from './components/TaskInput';
 import { TaskItem } from './components/TaskItem';
 import { Filters } from './components/Filters';
 import { ProgressBar } from './components/ProgressBar';
-import { SearchBar } from './components/SearchBar';
-import { ThemeSwitcher } from './components/ThemeSwitcher';
-import { CategoryStats } from './components/CategoryStats';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { cn } from './utils/cn';
 
 function App() {
   const [tasks, setTasks] = useLocalStorage('taskly-tasks', []);
   const [darkMode, setDarkMode] = useLocalStorage('taskly-dark-mode', true);
-  const [theme, setTheme] = useLocalStorage('taskly-theme', { name: 'Indigo', color: '#6366f1', hover: '#4f46e5' });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isFocusMode, setIsFocusMode] = useState(false);
   const [filterStatus, setFilterStatus] = useState('All');
   const [filterCategory, setFilterCategory] = useState('All');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showHelp, setShowHelp] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
-  const [playSuccess] = useSound('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3', { volume: 0.5 });
-  const [playComplete] = useSound('https://assets.mixkit.co/active_storage/sfx/2013/2013-preview.mp3', { volume: 0.5 });
+  const [playSuccess] = useSound('https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3', { volume: 0.3 });
 
-  useEffect(() => {
-    if (darkMode) document.documentElement.classList.add('dark');
-    else document.documentElement.classList.remove('dark');
-  }, [darkMode]);
-
-  useEffect(() => {
-    document.documentElement.style.setProperty('--accent-color', theme.color);
-    document.documentElement.style.setProperty('--accent-hover', theme.hover);
-  }, [theme]);
-
-  const addTask = useCallback(({ text, category, priority, dueDate, notes }) => {
-    const newTask = {
-      id: Date.now().toString(),
-      text,
-      category,
-      priority,
-      dueDate,
-      notes,
-      completed: false,
-      createdAt: new Date().toISOString(),
-    };
-    setTasks([newTask, ...tasks]);
-  }, [tasks, setTasks]);
-
-  const deleteTask = (id) => setTasks(tasks.filter(t => t.id !== id));
+  const stats = useMemo(() => {
+    const total = tasks.length;
+    const completed = tasks.filter(t => t.completed).length;
+    const progress = total > 0 ? (completed / total) * 100 : 0;
+    const streak = tasks.filter(t => t.completed && new Date(t.createdAt).toDateString() === new Date().toDateString()).length;
+    return { total, completed, progress, streak };
+  }, [tasks]);
 
   const toggleTask = (id) => {
     const newTasks = tasks.map(t => {
@@ -90,14 +77,12 @@ function App() {
         const completed = !t.completed;
         if (completed) {
           playSuccess();
-          if (t.priority === 'high') {
-            confetti({
-              particleCount: 150,
-              spread: 70,
-              origin: { y: 0.6 },
-              colors: [theme.color, '#ec4899', '#8b5cf6']
-            });
-          }
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 },
+            colors: ['#8B5CF6', '#EC4899', '#06B6D4']
+          });
         }
         return { ...t, completed };
       }
@@ -106,11 +91,16 @@ function App() {
     setTasks(newTasks);
   };
 
-  const editTask = (id, newText) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, text: newText } : t));
-  };
-
-  const clearCompleted = () => setTasks(tasks.filter(t => !t.completed));
+  const filteredTasks = useMemo(() => {
+    return tasks.filter(task => {
+      const statusMatch = filterStatus === 'All' || 
+        (filterStatus === 'Active' && !task.completed) || 
+        (filterStatus === 'Completed' && task.completed);
+      const categoryMatch = filterCategory === 'All' || task.category === filterCategory;
+      const searchMatch = task.text.toLowerCase().includes(searchQuery.toLowerCase());
+      return statusMatch && categoryMatch && searchMatch;
+    });
+  }, [tasks, filterStatus, filterCategory, searchQuery]);
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
@@ -123,244 +113,305 @@ function App() {
     }
   };
 
-  const exportData = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(tasks));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "taskly_backup.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  };
-
-  const filteredTasks = useMemo(() => {
-    return tasks.filter(task => {
-      const statusMatch = filterStatus === 'All' || 
-        (filterStatus === 'Active' && !task.completed) || 
-        (filterStatus === 'Completed' && task.completed);
-      const categoryMatch = filterCategory === 'All' || task.category === filterCategory;
-      const searchMatch = task.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        task.notes?.toLowerCase().includes(searchQuery.toLowerCase());
-      return statusMatch && categoryMatch && searchMatch;
-    });
-  }, [tasks, filterStatus, filterCategory, searchQuery]);
-
-  const stats = useMemo(() => {
-    const total = tasks.length;
-    const completed = tasks.filter(t => t.completed).length;
-    const progress = total > 0 ? (completed / total) * 100 : 0;
-    return { total, completed, progress };
-  }, [tasks]);
-
   useEffect(() => {
-    if (tasks.length > 0 && tasks.every(t => t.completed)) {
-      confetti({
-        particleCount: 200,
-        spread: 100,
-        origin: { y: 0.5 },
-        colors: ['#22c55e', theme.color, '#fbbf24']
-      });
-      playComplete();
+    if (darkMode) {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
     }
-  }, [tasks.length, tasks.every(t => t.completed), theme.color]);
+  }, [darkMode]);
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 md:py-16 min-h-screen flex flex-col">
-      {/* Header Section */}
-      <header className="flex flex-col md:flex-row justify-between items-center gap-6 mb-12">
-        <div className="flex items-center gap-4">
-          <motion.div 
-            whileHover={{ rotate: 15, scale: 1.1 }}
-            className="w-16 h-16 bg-primary rounded-3xl flex items-center justify-center shadow-2xl shadow-primary/40 relative group shrink-0"
-          >
-            <Layout className="text-white" size={36} />
-            <div className="absolute -top-1 -right-1 w-5 h-5 bg-secondary rounded-full border-2 border-white dark:border-slate-900 group-hover:scale-125 transition-transform" />
-          </motion.div>
-          <div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tighter bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Taskly</h1>
-            <p className="text-text-muted text-xs md:text-sm font-bold tracking-widest flex items-center gap-2">
-              ULTIMATE WORKFLOW <Sparkles size={14} className="text-amber-400" />
-            </p>
+    <div className="min-h-screen relative overflow-hidden px-4 py-8 md:py-16">
+      <div className="nebula-bg" />
+      
+      {/* HUD - Floating Navigation */}
+      <nav className="fixed top-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-4">
+        <motion.div 
+          initial={{ y: -100, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          className="cosmic-card p-2 flex items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-3 pl-4">
+            <div className="w-10 h-10 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30 rotate-12">
+              <Rocket className="text-white" size={20} />
+            </div>
+            <span className="font-black text-xl tracking-tighter glow-text">TASKLY</span>
           </div>
-        </div>
-
-        <div className="flex flex-wrap items-center justify-center gap-3">
-          <ThemeSwitcher currentTheme={theme} onThemeChange={setTheme} />
           
-          <div className="flex gap-2">
-            <button
-              onClick={exportData}
-              title="Export Data"
-              className="p-3 glass-card text-slate-500 hover:text-primary transition-all"
+          <div className="flex items-center gap-2">
+            <a 
+              href="https://farmanullah1.github.io/My-Portfolio/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="p-3 hover:bg-primary/10 rounded-2xl text-white/40 hover:text-primary transition-all flex items-center gap-2"
+              title="My Portfolio"
             >
-              <Download size={20} />
-            </button>
-            <button
-              onClick={() => setShowHelp(!showHelp)}
-              title="Help"
-              className={cn(
-                "p-3 glass-card transition-all",
-                showHelp ? "text-primary bg-primary/10" : "text-slate-500 hover:text-primary"
-              )}
+              <User size={20} />
+              <span className="hidden lg:inline text-xs font-bold uppercase tracking-widest">Portfolio</span>
+            </a>
+            <a 
+              href="https://github.com/farmanullah1/" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="p-3 hover:bg-primary/10 rounded-2xl text-white/40 hover:text-primary transition-all flex items-center gap-2"
+              title="GitHub Profile"
             >
-              <Keyboard size={20} />
-            </button>
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
+              <svg 
+                viewBox="0 0 24 24" 
+                width="20" 
+                height="20" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                fill="none" 
+                strokeLinecap="round" 
+                strokeLinejoin="round"
+              >
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+              </svg>
+              <span className="hidden lg:inline text-xs font-bold uppercase tracking-widest">GitHub</span>
+            </a>
+            <div className="w-[1px] h-6 bg-white/10 mx-1" />
+            <button 
               onClick={() => setDarkMode(!darkMode)}
-              className="p-3 glass-card text-slate-500 hover:text-primary"
+              className="p-3 hover:bg-primary/10 rounded-2xl text-white/40 hover:text-primary transition-all"
+              title={darkMode ? "Switch to Light Mode" : "Switch to Dark Mode"}
             >
               {darkMode ? <Sun size={20} /> : <Moon size={20} />}
-            </motion.button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-        <div className="lg:col-span-2">
-          <ProgressBar progress={stats.progress} />
-          <CategoryStats tasks={tasks} />
-        </div>
-        <div className="glass-card p-6 flex flex-col justify-between relative overflow-hidden">
-          <div className="absolute -right-8 -top-8 w-32 h-32 bg-primary/5 rounded-full blur-3xl" />
-          <div className="relative z-10">
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-              <Info size={16} /> Quick Tip
-            </h3>
-            <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed font-medium">
-              "Focus on being productive instead of busy." Reorder your high-priority tasks to the top to stay aligned with your goals.
-            </p>
-          </div>
-          <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-800/50 flex justify-between items-end">
-            <div>
-              <div className="text-3xl font-black text-primary">{tasks.length - stats.completed}</div>
-              <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tasks Remaining</div>
+            </button>
+            <div className="w-[1px] h-6 bg-white/10 mx-1" />
+            <button 
+              onClick={() => setIsFocusMode(!isFocusMode)}
+              className={cn(
+                "p-3 rounded-2xl transition-all",
+                isFocusMode ? "bg-primary text-white" : "hover:bg-primary/10 text-white/40"
+              )}
+            >
+              <Zap size={20} />
+            </button>
+            <div className="hidden xl:flex items-center gap-2 bg-white/5 rounded-2xl px-4 py-2 border border-white/5">
+              <Flame size={16} className="text-orange-500 animate-pulse" />
+              <span className="font-bold text-sm">{stats.streak}</span>
             </div>
-            <CheckCircle2 size={32} className="text-green-500/20" />
           </div>
-        </div>
-      </div>
+        </motion.div>
+      </nav>
 
-      <AnimatePresence>
-        {showHelp && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            className="mb-8 overflow-hidden"
+      <main className="max-w-4xl mx-auto pt-24 pb-32">
+        <header className="mb-12 text-center">
+          <motion.h2 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-5xl md:text-7xl font-black mb-4 tracking-tighter"
           >
-            <div className="glass-card p-6 bg-amber-500/5 border-amber-500/20">
-              <h4 className="font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2 mb-4">
-                <Keyboard size={18} /> Keyboard Shortcuts
-              </h4>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-semibold text-slate-500">
-                <div className="flex items-center gap-2">
-                  <kbd className="px-2 py-1 bg-white dark:bg-slate-800 border rounded shadow-sm">Enter</kbd> Add / Save Task
+            Cosmic <span className="logo-gradient">Productivity</span>
+          </motion.h2>
+          <motion.p 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="text-white/40 text-lg font-medium"
+          >
+            Manage your universe of tasks with style.
+          </motion.p>
+        </header>
+
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-12">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="cosmic-card p-8 lg:col-span-2 relative overflow-hidden"
+          >
+            <div className="absolute top-0 right-0 w-64 h-64 bg-primary/10 blur-[100px] rounded-full" />
+            <div className="relative z-10">
+              <div className="flex justify-between items-end mb-6">
+                <div>
+                  <h3 className="text-sm font-bold text-white/30 uppercase tracking-[0.2em] mb-2">Completion Rate</h3>
+                  <div className="text-6xl font-black glow-text">{Math.round(stats.progress)}%</div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <kbd className="px-2 py-1 bg-white dark:bg-slate-800 border rounded shadow-sm">Esc</kbd> Cancel Edit
-                </div>
-                <div className="flex items-center gap-2">
-                  <kbd className="px-2 py-1 bg-white dark:bg-slate-800 border rounded shadow-sm">Space</kbd> Toggle Completion
-                </div>
-                <div className="flex items-center gap-2 text-primary font-bold">
-                  <kbd className="px-2 py-1 bg-white dark:bg-slate-800 border rounded shadow-sm">Drag</kbd> Reorder Tasks
+                <div className="text-right">
+                  <div className="text-primary font-bold text-lg">{stats.completed} / {stats.total}</div>
+                  <div className="text-white/20 text-xs font-bold uppercase">Tasks Finished</div>
                 </div>
               </div>
+              <ProgressBar progress={stats.progress} />
+            </div>
+          </motion.div>
+
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1 }}
+            className="cosmic-card p-8 flex flex-col justify-between bg-gradient-to-br from-primary/20 to-secondary/20 border-primary/20"
+          >
+            <Sparkles className="text-primary mb-4" size={32} />
+            <div>
+              <h4 className="text-xl font-bold mb-2 leading-tight">Ready for a productive mission?</h4>
+              <p className="text-white/50 text-sm">You have {stats.total - stats.completed} pending tasks today.</p>
+            </div>
+            <button className="mt-6 btn-cosmic w-full">
+              Start Focus Session <ArrowRight size={18} />
+            </button>
+          </motion.div>
+        </div>
+
+        <div className="space-y-6">
+          {/* Quick Actions & Search */}
+          <div className="flex flex-col md:flex-row gap-4">
+            <div className="relative flex-1 group">
+              <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-primary transition-colors" size={20} />
+              <input 
+                type="text" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Find your next task..." 
+                className="input-cosmic pl-16"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button className="cosmic-card px-6 py-4 flex items-center gap-2 hover:bg-white/5">
+                <Filter size={18} className="text-white/40" />
+                <span className="font-bold text-sm">Filter</span>
+              </button>
+              <button className="btn-cosmic px-8">
+                <Plus size={24} strokeWidth={3} />
+              </button>
+            </div>
+          </div>
+
+          <TaskInput onAdd={(task) => setTasks([ { ...task, id: Date.now().toString(), createdAt: new Date().toISOString(), completed: false }, ...tasks ])} />
+
+          <Filters 
+            filterStatus={filterStatus} 
+            setFilterStatus={setFilterStatus}
+            filterCategory={filterCategory}
+            setFilterCategory={setFilterCategory}
+            onClearCompleted={() => setTasks(tasks.filter(t => !t.completed))}
+          />
+
+          {/* Task List */}
+          <div className="space-y-4 min-h-[400px]">
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={filteredTasks.map(t => t.id)} strategy={verticalListSortingStrategy}>
+                <AnimatePresence mode="popLayout">
+                  {filteredTasks.length > 0 ? (
+                    filteredTasks.map((task, index) => (
+                      <motion.div
+                        key={task.id}
+                        initial={{ opacity: 0, x: -30, scale: 0.9 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.8, x: 50 }}
+                        transition={{ delay: index * 0.05 }}
+                        layout
+                      >
+                        <TaskItem 
+                          task={task} 
+                          onDelete={(id) => setTasks(tasks.filter(t => t.id !== id))} 
+                          onToggle={toggleTask}
+                          onEdit={(id, text) => setTasks(tasks.map(t => t.id === id ? { ...t, text } : t))}
+                        />
+                      </motion.div>
+                    ))
+                  ) : (
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="text-center py-32 cosmic-card border-dashed"
+                    >
+                      <ListTodo size={64} className="mx-auto text-white/10 mb-6" strokeWidth={1} />
+                      <h3 className="text-2xl font-bold text-white/40">The sky is clear.</h3>
+                      <p className="text-white/20 mt-2">No tasks found in this orbit.</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </SortableContext>
+            </DndContext>
+          </div>
+        </div>
+      </main>
+
+      {/* Focus Mode Overlay */}
+      <AnimatePresence>
+        {isFocusMode && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-cosmic-bg/95 backdrop-blur-2xl flex flex-col items-center justify-center p-8 text-center"
+          >
+            <button 
+              onClick={() => setIsFocusMode(false)}
+              className="absolute top-12 right-12 p-4 hover:bg-white/5 rounded-full transition-all"
+            >
+              <X size={32} />
+            </button>
+            
+            <div className="max-w-2xl w-full space-y-12">
+              <div className="space-y-4">
+                <Sparkles className="text-primary mx-auto mb-8" size={64} />
+                <h2 className="text-6xl font-black tracking-tighter">Focus Mode</h2>
+                <p className="text-white/40 text-xl font-medium italic">"One mission at a time."</p>
+              </div>
+
+              {filteredTasks.length > 0 ? (
+                <motion.div 
+                  layoutId={filteredTasks[0].id}
+                  className="cosmic-card p-12 text-left bg-gradient-to-br from-white/10 to-transparent"
+                >
+                  <span className="text-xs font-black text-primary uppercase tracking-[0.3em] mb-4 block">Current Objective</span>
+                  <h3 className="text-4xl font-bold mb-6">{filteredTasks[0].text}</h3>
+                  <button 
+                    onClick={() => toggleTask(filteredTasks[0].id)}
+                    className="btn-cosmic w-full py-6 text-xl"
+                  >
+                    Complete Objective
+                  </button>
+                </motion.div>
+              ) : (
+                <div className="text-white/20 text-2xl font-bold">No active missions.</div>
+              )}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      <div className="sticky top-4 z-40 mb-8 space-y-4">
-        <SearchBar value={searchQuery} onChange={setSearchQuery} />
-      </div>
-
-      <TaskInput onAdd={addTask} />
-
-      <Filters 
-        filterStatus={filterStatus} 
-        setFilterStatus={setFilterStatus}
-        filterCategory={filterCategory}
-        setFilterCategory={setFilterCategory}
-        onClearCompleted={clearCompleted}
-      />
-
-      {/* Task List */}
-      <div className="flex-1 pb-20">
-        <DndContext 
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          onDragEnd={handleDragEnd}
-        >
-          <SortableContext 
-            items={filteredTasks.map(t => t.id)}
-            strategy={verticalListSortingStrategy}
-          >
-            <motion.div
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 gap-2"
-            >
-              <AnimatePresence mode="popLayout" initial={false}>
-                {filteredTasks.length > 0 ? (
-                  filteredTasks.map((task) => (
-                    <motion.div
-                      key={task.id}
-                      layout
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      exit={{ opacity: 0, scale: 0.95, x: 20 }}
-                    >
-                      <TaskItem 
-                        task={task} 
-                        onDelete={deleteTask} 
-                        onToggle={toggleTask}
-                        onEdit={editTask}
-                      />
-                    </motion.div>
-                  ))
-                ) : (
-                  <motion.div 
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="text-center py-20 glass-card border-dashed"
-                  >
-                    <ListTodo size={48} className="mx-auto text-slate-300 mb-4" />
-                    <h3 className="text-lg font-bold text-slate-500">No tasks match your filters</h3>
-                    <p className="text-sm text-slate-400">Clear your search or filters to see more tasks.</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-          </SortableContext>
-        </DndContext>
-      </div>
-
-      {/* Footer */}
-      <footer className="mt-auto pt-12 text-center">
-        <div className="flex flex-wrap justify-center gap-8 mb-6">
-          <div className="flex flex-col items-center">
-            <div className="text-2xl font-black text-primary">{stats.total}</div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Total Created</div>
+      <footer className="max-w-4xl mx-auto border-t border-white/10 pt-12 text-center pb-20">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-8">
+          <div className="flex gap-12">
+            <div className="text-center">
+              <div className="text-3xl font-black glow-text text-primary">{stats.total}</div>
+              <div className="text-[10px] font-black text-white/20 uppercase tracking-widest mt-2">Missions</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-black glow-text text-secondary">{stats.completed}</div>
+              <div className="text-[10px] font-black text-white/20 uppercase tracking-widest mt-2">Completed</div>
+            </div>
           </div>
-          <div className="flex flex-col items-center">
-            <div className="text-2xl font-black text-green-500">{stats.completed}</div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Completed</div>
-          </div>
-          <div className="flex flex-col items-center">
-            <div className="text-2xl font-black text-secondary">{tasks.length - stats.completed}</div>
-            <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Pending</div>
+          
+          <div className="flex gap-4">
+            <button onClick={() => {
+              const data = JSON.stringify(tasks);
+              const blob = new Blob([data], {type: 'application/json'});
+              const url = URL.createObjectURL(blob);
+              const link = document.createElement('a');
+              link.href = url;
+              link.download = 'taskly_cosmic_backup.json';
+              link.click();
+            }} className="p-4 hover:bg-white/5 rounded-2xl text-white/40 transition-all flex items-center gap-2">
+              <Download size={20} /> <span className="font-bold text-sm uppercase">Backup</span>
+            </button>
+            <button className="p-4 hover:bg-white/5 rounded-2xl text-white/40 transition-all">
+              <Settings size={20} />
+            </button>
           </div>
         </div>
-        <div className="space-y-2">
-          <p className="text-sm text-text-muted font-bold tracking-tight">Taskly Ultimate v3.0</p>
-          <div className="flex justify-center gap-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-            <a href="https://farmanullah1.github.io/My-Portfolio/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors underline decoration-primary/30">My Portfolio</a>
-            <span>•</span>
-            <a href="https://farmanullah1.github.io/Taskly---Modern-Todo-Task-Manager-App/" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors underline decoration-primary/30">Live App</a>
+        
+        <div className="space-y-4">
+          <p className="text-sm font-black text-white/10 tracking-[0.5em] uppercase">Taskly Cosmic Pro v4.0</p>
+          <div className="flex justify-center gap-6 text-[10px] font-bold text-white/20 uppercase tracking-widest">
+            <a href="https://farmanullah1.github.io/My-Portfolio/" target="_blank" className="hover:text-primary transition-colors">Portfolio</a>
+            <a href="https://farmanullah1.github.io/Taskly---Modern-Todo-Task-Manager-App/" target="_blank" className="hover:text-primary transition-colors">Live View</a>
           </div>
         </div>
       </footer>
